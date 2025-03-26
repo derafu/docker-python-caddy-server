@@ -75,7 +75,14 @@ The `-f` parameter allows you to follow logs in real-time.
    django-admin startproject example .
    ```
 
-3. Access the site at:
+3. Run a single site manually
+   ```bash
+   /scripts/start_sites.sh www.example.com
+   ```
+   Note: If no site is specified, the script will start all available sites under /var/www/sites.
+
+
+4. Access the site at:
    - Production mode: https://www.example.com (requires DNS configuration).
    - Development mode: https://www.example.com.local:8443 (requires local hosts entry).
 
