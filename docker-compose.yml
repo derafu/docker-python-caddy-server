@@ -1,0 +1,74 @@
+#
+# Docker Compose file for the Derafu Sites Server.
+#
+# This file is used to configure the docker container for the Derafu Sites Server.
+#
+
+# Name of the docker container.
+name: ${SERVER_NAME:-derafu-sites-server-python}
+
+services:
+
+  # Main web server service using Django and Caddy
+  webserver:
+
+    # Add Linux capabilities to the container
+    cap_add:
+      - SYS_ADMIN  # Allows the container to perform system administration tasks
+
+    # Build configuration for the container
+    build:
+      context: .  # Use the current directory as build context
+      dockerfile: Dockerfile  # Use the Dockerfile in the current directory
+      args:
+        # Build arguments passed to the Dockerfile
+        CADDY_DEBUG: ${CADDY_DEBUG:-}  # Debug mode for Caddy
+        WWW_ROOT_PATH: ${WWW_ROOT_PATH:-/var/www/sites}  # Root path for websites
+        WWW_USER: ${WWW_USER:-admin}  # User for web server operations
+        WWW_GROUP: ${WWW_GROUP:-www-data}  # Group for web server operations
+
+    # Name of the container
+    container_name: ${SERVER_NAME:-derafu-sites-server}-python-caddy
+
+    # Environment variables passed to the container
+    environment:
+      SERVER_NAME: ${SERVER_NAME:-derafu-sites-server}-python-caddy  # Server name
+      CADDY_DEBUG: ${CADDY_DEBUG:-}  # Debug mode for Caddy
+      CADDY_EMAIL: ${CADDY_EMAIL:-admin@example.com}  # Email for Caddy SSL certificates
+      CADDY_LOG_SIZE: ${CADDY_LOG_SIZE:-100mb}  # Maximum size of Caddy logs
+      CADDY_LOG_KEEP: ${CADDY_LOG_KEEP:-5}  # Number of log files to keep
+      CADDY_LOG_KEEP_DAYS: ${CADDY_LOG_KEEP_DAYS:-14}  # Days to keep log files
+      CADDY_HTTPS_ISSUER: ${CADDY_HTTPS_ISSUER:-internal}  # HTTPS certificate issuer
+      WWW_ROOT_PATH: ${WWW_ROOT_PATH:-/var/www/sites}  # Root path for websites
+      WWW_USER: ${WWW_USER:-admin}  # User for web server operations
+      SITES_DIR: ${SITES_DIR:-/home/admin/sites}  # Directory for site configurations
+      EDITOR: ${EDITOR:-vim}  # Default text editor
+      VISUAL: ${VISUAL:-vim}  # Default visual editor
+      GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET:-}  # Secret for GitHub webhooks
+
+    # Restart policy for the container
+    restart: unless-stopped
+
+    # Port mappings from host to container
+    ports:
+      - "${HTTP_PORT:-8080}:80"  # HTTP port
+      - "${HTTPS_PORT:-8443}:443"  # HTTPS port
+      - "${SSH_PORT:-2222}:22"  # SSH port for remote management
+      - "${MANAGER_PORT:-9090}:9090"  # Management interface port
+      - "8000:8000"  # Django development server port
+
+    # Volume mappings for persistent data
+    volumes:
+      - ${VOLUME_SITES:-./sites}:${WWW_ROOT_PATH:-/var/www/sites}  # Sites directory
+      - ./config/caddy/Caddyfile:/etc/caddy/Caddyfile  # Caddy configuration
+
+    # Network configuration
+    networks:
+      - default  # Default network
+      - django-network  # External Django network
+
+# Network definitions
+networks:
+  default:  # Default network for this compose file
+  django-network:  # External network for Django communication
+    external: true  # This network is created outside this compose file

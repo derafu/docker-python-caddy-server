@@ -1,0 +1,9 @@
+/var/log/gunicorn/*.log {
+    daily                     # Rota los logs diariamente
+    missingok                 # No mostrar error si el archivo no existe
+    rotate 14                 # Mantener los últimos 14 logs
+    compress                  # Comprimir los logs antiguos
+    delaycompress             # Comprimirlos un día después de la rotación
+    notifempty                # No rotar si el archivo está vacío
+    copytruncate              # Copia el log y trunca el archivo original
+}

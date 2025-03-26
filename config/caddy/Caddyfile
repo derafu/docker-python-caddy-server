@@ -1,0 +1,168 @@
+# ==============================
+#    CADDYFILE
+# ==============================
+#
+# - Caddy acts as a reverse proxy for Gunicorn
+# - Redirects HTTP traffic to HTTPS
+# - Handles ".local" domains in development
+# - Serves static and media files without Nginx
+#
+
+# ============
+# GLOBAL CONFIGURATION
+# ============
+{
+    # Debug mode (optional, use 'debug' or 'error')
+    {$CADDY_DEBUG}
+
+    # Email for SSL certificates
+    email {$CADDY_EMAIL}
+
+    # Allow on-demand TLS certificates
+    on_demand_tls {
+        ask http://localhost:9090/api/ask
+    }
+}
+
+# ============
+# FUNCIÓN: Normalizar dominios
+# ============
+#
+# Normalize the domain, in the $_GET['domain'] variable, to the real domain.
+#
+# The process is as follows:
+#
+#   1. The domain is mapped to the non-local domain.
+#   2. The non-local domain is mapped to the real domain.
+#   3. The real domain is checked if it exists as a directory in the {$WWW_ROOT_PATH}.
+#   4. If the real domain exists, the endpoint will return a 200 status.
+#   5. Otherwise, it will return a 404 status.
+#
+(normalize_domain) {
+    # Remove the .local extension from the domain if exists.
+    map     {query.domain}          {non_local_domain} {
+            ~(.*)\.local$           "${1}"
+            default                 "{query.domain}"
+    }
+
+    # Add www to the domain if it doesn't exist and the domain is a second level
+    # domain.
+    map     {non_local_domain}      {real_domain} {
+            ~^(www\..+)$            "${1}"
+            ~^([^.]+\.[^.]+)$       "www.${1}"
+            default                 "{non_local_domain}"
+    }
+}
+
+# ==============================
+# HTTP -> HTTPS REDIRECTION
+# ==============================
+:80 {
+    # Add basic logging.
+    log {
+        output file /var/log/caddy/http_redirect.log {
+            roll_size 10mb
+            roll_keep 3
+            roll_keep_days 7
+        }
+    }
+
+    # Redirect all HTTP traffic to HTTPS.
+    redir https://{host}{uri} permanent
+}
+
+# ==============================
+# HTTPS AND REVERSE PROXY CONFIGURATION
+# ==============================
+# HTTPS - handle all actual processing.
+:443 {
+    log {
+        output file /var/log/caddy/access.log {
+            roll_size {$CADDY_LOG_SIZE}
+            roll_keep {$CADDY_LOG_KEEP}
+            roll_keep_days {$CADDY_LOG_KEEP_DAYS}
+        }
+    }
+
+    tls {
+        issuer {$CADDY_HTTPS_ISSUER}
+        on_demand
+    }
+
+    @local_domain vars_regexp local_domain {host} ^(?P<clean_domain>.+)\.local$
+    @production not host *.local
+
+    # ==============================
+    # LOCAL (.local)
+    # ==============================
+    handle @local_domain {
+        reverse_proxy unix//run/gunicorn/{re.local_domain.clean_domain}.sock {
+            header_up Host {host}
+        }
+    }
+
+    # ==============================
+    # PRODUCTION (non .local)
+    # ==============================
+    handle @production {
+        handle_path /static/* {
+            root * /var/www/sites/{host}/static
+            file_server
+        }
+
+        handle_path /media/* {
+            root * /var/www/sites/{host}/media
+            file_server
+        }
+
+        reverse_proxy webserver:8000 {
+            header_up X-Forwarded-Proto {scheme}
+            header_up X-Forwarded-For {remote}
+            header_up X-Forwarded-Host {host}
+        }
+    }
+
+    # Fallback
+    respond "Domain {host} is not available." 404
+}
+
+# ==============================
+# ENDPOINT FOR TLS CERTIFICATES AND WEBHOOKS
+# ==============================
+
+#
+# On-demand TLS endpoint and Webhook Handler.
+#
+# This endpoint is used to check if a domain is available for TLS.
+# It will return a 200 status if the domain is available, otherwise it will
+# return a 404 status.
+#
+# Also is used to handle webhooks sent to the server. The webhook is processed
+# by the {$WWW_ROOT_PATH}/.admin/webhook.php file.
+#
+:9090 {
+    # Handle TLS ask.
+    # Normalize the domain to the real domain.
+    # Check if the real domain exists as a directory in the {$WWW_ROOT_PATH}.
+    # If the real domain exists, return a 200 status.
+    root * {$WWW_ROOT_PATH}
+    import normalize_domain
+    @ask <<CEL
+        path('/api/ask')
+        && {real_domain} != ""
+        && file({'try_files': [{real_domain} + '/']})
+    CEL
+    handle @ask {
+        respond "Domain {real_domain} is available." 200
+    }
+
+    # Handle webhooks.
+    @webhook path /api/webhook
+    handle @webhook {
+        rewrite * /.admin/webhook.php
+        php_fastcgi unix//var/run/php/php-fpm.sock
+    }
+
+    # Default response.
+    respond "Invalid request." 400
+}
