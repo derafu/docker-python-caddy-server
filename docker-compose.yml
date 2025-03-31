@@ -61,14 +61,3 @@ services:
     volumes:
       - ${VOLUME_SITES:-./sites}:${WWW_ROOT_PATH:-/var/www/sites}  # Sites directory
       - ./config/caddy/Caddyfile:/etc/caddy/Caddyfile  # Caddy configuration
-
-    # Network configuration
-    networks:
-      - default  # Default network
-      - django-network  # External Django network
-
-# Network definitions
-networks:
-  default:  # Default network for this compose file
-  django-network:  # External network for Django communication
-    external: true  # This network is created outside this compose file
