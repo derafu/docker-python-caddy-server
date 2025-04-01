@@ -49,15 +49,6 @@ services:
     # Restart policy for the container
     restart: unless-stopped
 
-    # Port mappings from host to container
-    ports:
-      - "${HTTP_PORT:-8080}:80"  # HTTP port
-      - "${HTTPS_PORT:-8443}:443"  # HTTPS port
-      - "${SSH_PORT:-2222}:22"  # SSH port for remote management
-      - "${MANAGER_PORT:-9090}:9090"  # Management interface port
-      - "8000:8000"  # Django development server port
-
     # Volume mappings for persistent data
     volumes:
       - ${VOLUME_SITES:-./sites}:${WWW_ROOT_PATH:-/var/www/sites}  # Sites directory
-      - ./config/caddy/Caddyfile:/etc/caddy/Caddyfile  # Caddy configuration
