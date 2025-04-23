@@ -1,6 +1,6 @@
-# ==============================
-#    CADDYFILE
-# ==============================
+# ==============================================================================
+# CADDYFILE
+# ==============================================================================
 #
 # - Caddy acts as a reverse proxy for Gunicorn
 # - Redirects HTTP traffic to HTTPS
@@ -8,9 +8,9 @@
 # - Serves static and media files without Nginx
 #
 
-# ============
+# ==============================================================================
 # GLOBAL CONFIGURATION
-# ============
+# ==============================================================================
 {
     # Debug mode (optional, use 'debug' or 'error')
     {$CADDY_DEBUG}
@@ -24,46 +24,54 @@
     }
 }
 
-# ============
-# FUNCIÓN: Normalizar dominios
-# ============
+# ==============================================================================
+# SNIPPET FOR DOMAIN NORMALIZATION
+# ==============================================================================
 #
 # Normalize the domain, in the $_GET['domain'] variable, to the real domain.
 #
 # The process is as follows:
 #
-#   1. The domain is mapped to the non-local domain.
-#   2. The non-local domain is mapped to the real domain.
-#   3. The real domain is checked if it exists as a directory in the {$WWW_ROOT_PATH}.
-#   4. If the real domain exists, the endpoint will return a 200 status.
-#   5. Otherwise, it will return a 404 status.
+#   1. The domain is mapped to the non-local domain (removes .local if present).
+#   2. The domain is mapped to remove environment subdomains (stage, dev, qa, etc).
+#   3. The non-local domain is mapped to the real domain (adds www if needed).
+#   4. The real domain is checked if it exists as a directory in the {$WWW_ROOT_PATH}.
+#   5. If the real domain exists, the endpoint will return a 200 status.
+#   6. Otherwise, it will return a 404 status.
 #
 (normalize_domain) {
     # Remove the .local extension from the domain if exists.
-    map     {query.domain}          {non_local_domain} {
+    map     {domain_input}          {non_local_domain} {
             ~(.*)\.local$           "${1}"
-            default                 "{query.domain}"
+            default                 "{domain_input}"
+    }
+
+    # Remove environment subdomain (stage, dev, qa, etc) if exists.
+    # This handles patterns like app.stage.example.com -> app.example.com
+    # or www.dev.example.com -> www.example.com
+    map     {non_local_domain}      {no_env_domain} {
+            ~^([^.]+)\.(local|dev|qa|stage)\.(.*?)$     "${1}.${3}"
+            default                               "{non_local_domain}"
     }
 
     # Add www to the domain if it doesn't exist and the domain is a second level
     # domain.
-    map     {non_local_domain}      {real_domain} {
+    map     {no_env_domain}        {real_domain} {
             ~^(www\..+)$            "${1}"
             ~^([^.]+\.[^.]+)$       "www.${1}"
-            default                 "{non_local_domain}"
+            default                 "{no_env_domain}"
     }
 }
 
-# ==============================
+# ==============================================================================
 # HTTP -> HTTPS REDIRECTION
-# ==============================
+# ==============================================================================
 :80 {
     # Add basic logging.
     log {
         output file /var/log/caddy/http_redirect.log {
             roll_size 10mb
             roll_keep 3
-            roll_keep_days 7
         }
     }
 
@@ -71,16 +79,22 @@
     redir https://{host}{uri} permanent
 }
 
-# ==============================
+# ==============================================================================
 # HTTPS AND REVERSE PROXY CONFIGURATION
-# ==============================
+# ==============================================================================
+#
 # HTTPS - handle all actual processing.
 :443 {
+    # Normalize the domain to the real domain.
+    map {host} {domain_input} {
+        default "{host}"
+    }
+    import normalize_domain
+
     log {
         output file /var/log/caddy/access.log {
             roll_size {$CADDY_LOG_SIZE}
             roll_keep {$CADDY_LOG_KEEP}
-            roll_keep_days {$CADDY_LOG_KEEP_DAYS}
         }
     }
 
@@ -106,30 +120,29 @@
     # ==============================
     handle @production {
         handle_path /static/* {
-            root * /var/www/sites/{host}/static
+            root * /var/www/sites/{real_domain}/static
             file_server
         }
 
         handle_path /media/* {
-            root * /var/www/sites/{host}/media
+            root * /var/www/sites/{real_domain}/media
             file_server
         }
 
-        reverse_proxy webserver:8000 {
+        reverse_proxy unix//run/gunicorn/{real_domain}.sock {
             header_up X-Forwarded-Proto {scheme}
             header_up X-Forwarded-For {remote}
-            header_up X-Forwarded-Host {host}
+            header_up X-Forwarded-Host {domain_input}
         }
     }
 
     # Fallback
-    respond "Domain {host} is not available." 404
+    respond "Domain {domain_input} (Site: {real_domain}) is not available." 404
 }
 
-# ==============================
+# ==============================================================================
 # ENDPOINT FOR TLS CERTIFICATES AND WEBHOOKS
-# ==============================
-
+# ==============================================================================
 #
 # On-demand TLS endpoint and Webhook Handler.
 #
@@ -146,11 +159,14 @@
     # Check if the real domain exists as a directory in the {$WWW_ROOT_PATH}.
     # If the real domain exists, return a 200 status.
     root * {$WWW_ROOT_PATH}
+    map {query.domain} {domain_input} {
+        default "{query.domain}"
+    }
     import normalize_domain
     @ask <<CEL
         path('/api/ask')
         && {real_domain} != ""
-        && file({'try_files': [{real_domain} + '/']})
+        && (file({'try_files': [{real_domain} + '/']}) || {$CADDY_HTTPS_ALLOW_ANY_HOST})
     CEL
     handle @ask {
         respond "Domain {real_domain} is available." 200

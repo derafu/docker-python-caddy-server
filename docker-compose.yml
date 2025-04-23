@@ -37,7 +37,7 @@ services:
       CADDY_EMAIL: ${CADDY_EMAIL:-admin@example.com}  # Email for Caddy SSL certificates
       CADDY_LOG_SIZE: ${CADDY_LOG_SIZE:-100mb}  # Maximum size of Caddy logs
       CADDY_LOG_KEEP: ${CADDY_LOG_KEEP:-5}  # Number of log files to keep
-      CADDY_LOG_KEEP_DAYS: ${CADDY_LOG_KEEP_DAYS:-14}  # Days to keep log files
+      CADDY_HTTPS_ALLOW_ANY_HOST: ${CADDY_HTTPS_ALLOW_ANY_HOST:-false}
       CADDY_HTTPS_ISSUER: ${CADDY_HTTPS_ISSUER:-internal}  # HTTPS certificate issuer
       WWW_ROOT_PATH: ${WWW_ROOT_PATH:-/var/www/sites}  # Root path for websites
       WWW_USER: ${WWW_USER:-admin}  # User for web server operations
