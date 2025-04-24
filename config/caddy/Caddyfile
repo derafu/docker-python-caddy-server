@@ -57,8 +57,8 @@
     # Add www to the domain if it doesn't exist and the domain is a second level
     # domain.
     map     {no_env_domain}        {real_domain} {
-            ~^(www\..+)$            "${1}"
-            ~^([^.]+\.[^.]+)$       "www.${1}"
+#            ~^(www\..+)$            "${1}"
+#            ~^([^.]+\.[^.]+)$       "www.${1}"
             default                 "{no_env_domain}"
     }
 }
@@ -107,6 +107,19 @@
     @production not host *.local
 
     # ==============================
+    # STATIC FILES Y MEDIA
+    # ==============================
+    handle_path /static/* {
+        root * {$WWW_ROOT_PATH}/{real_domain}/current/static
+        file_server
+    }
+
+    handle_path /media/* {
+        root * {$WWW_ROOT_PATH}/{real_domain}/current/media
+        file_server
+    }
+
+    # ==============================
     # LOCAL (.local)
     # ==============================
     handle @local_domain {
@@ -119,19 +132,7 @@
     # PRODUCTION (non .local)
     # ==============================
     handle @production {
-        handle_path /static/* {
-            root * /var/www/sites/{real_domain}/static
-            file_server
-        }
-
-        handle_path /media/* {
-            root * /var/www/sites/{real_domain}/media
-            file_server
-        }
-
         reverse_proxy unix//run/gunicorn/{real_domain}.sock {
-            header_up X-Forwarded-Proto {scheme}
-            header_up X-Forwarded-For {remote}
             header_up X-Forwarded-Host {domain_input}
         }
     }
