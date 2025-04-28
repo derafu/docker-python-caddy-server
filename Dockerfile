@@ -53,6 +53,7 @@ RUN \
     libxml2-dev \
     libxslt-dev \
     logrotate \
+    locales \
     meson \
     nano \
     nmap \
@@ -72,6 +73,23 @@ RUN \
     wget \
     zip \
     zlib1g-dev \
+    # Install wkhtmltopdf
+    && ARCH=$(dpkg --print-architecture) \
+    && if [ "$ARCH" = "arm64" ]; then \
+        wget https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-3/wkhtmltox_0.12.6.1-3.bookworm_arm64.deb -O wkhtmltox.deb; \
+    else \
+        wget https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-3/wkhtmltox_0.12.6.1-3.bookworm_amd64.deb -O wkhtmltox.deb; \
+    fi \
+    && apt-get install -y ./wkhtmltox.deb \
+    && rm wkhtmltox.deb \
+    \
+    # Install locales
+    && sed -i 's/# es_ES.UTF-8 UTF-8/es_ES.UTF-8 UTF-8/' /etc/locale.gen \
+    && echo "es_ES.UTF-8 UTF-8" >> /etc/locale.gen \
+    && echo "es_ES ISO-8859-1" >> /etc/locale.gen \
+    && locale-gen \
+    && update-locale LANG=es_ES.UTF-8 \
+    \
     # Install Caddy
     && curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg \
     && curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list \
@@ -108,6 +126,11 @@ RUN \
     && mkdir -p /etc/ssh \
     && ssh-keyscan github.com >> /etc/ssh/ssh_known_hosts \
     && chmod 644 /etc/ssh/ssh_known_hosts
+
+# Configure locales.
+ENV LANG=es_ES.UTF-8
+ENV LC_ALL=es_ES.UTF-8
+ENV LC_TIME=es_ES
 
 # Configure SSH client (this will include the config form the server, but is not used for SSH access).
 COPY config/ssh/ /home/${WWW_USER}/.ssh/
