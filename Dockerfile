@@ -71,6 +71,7 @@ RUN \
     unzip \
     vim \
     wget \
+    yq \
     zip \
     zlib1g-dev \
     # Install wkhtmltopdf
@@ -159,9 +160,9 @@ COPY config/caddy/Caddyfile /etc/caddy/Caddyfile
 # Configure SSH.
 COPY config/ssh/sshd_config /etc/ssh/sshd_config
 
-# Create log directories for Gunicorn and Caddy.
-RUN mkdir -p /var/log/gunicorn /var/log/caddy \
-    && chmod 777 /var/log/gunicorn /var/log/caddy
+# Create log directories for Gunicorn and Caddy and Celery.
+RUN mkdir -p /var/log/gunicorn /var/log/caddy /var/log/celery \
+    && chmod 777 /var/log/gunicorn /var/log/caddy /var/log/celery
 
 # Copy logrotate configuration.
 COPY config/logrotate/gunicorn /etc/logrotate.d/gunicorn
@@ -175,6 +176,9 @@ RUN chmod +x /scripts/start_sites.sh
 
 COPY scripts/start_services.sh /scripts/start_services.sh
 RUN chmod +x /scripts/start_services.sh
+
+COPY scripts/start_celery_workers.sh /scripts/start_celery_workers.sh
+RUN chmod +x /scripts/start_celery_workers.sh
 
 RUN mkdir -p /run/gunicorn && chmod 777 /run/gunicorn
 
