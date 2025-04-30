@@ -85,10 +85,12 @@ RUN \
     \
     # Install locales
     && sed -i 's/# es_ES.UTF-8 UTF-8/es_ES.UTF-8 UTF-8/' /etc/locale.gen \
+    && echo "es_CL.UTF-8 UTF-8" >> /etc/locale.gen \
     && echo "es_ES.UTF-8 UTF-8" >> /etc/locale.gen \
+    && echo "es_CL ISO-8859-1" >> /etc/locale.gen \
     && echo "es_ES ISO-8859-1" >> /etc/locale.gen \
     && locale-gen \
-    && update-locale LANG=es_ES.UTF-8 \
+    && update-locale LANG=es_CL.UTF-8 \
     \
     # Install Caddy
     && curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg \
@@ -128,9 +130,9 @@ RUN \
     && chmod 644 /etc/ssh/ssh_known_hosts
 
 # Configure locales.
-ENV LANG=es_ES.UTF-8
-ENV LC_ALL=es_ES.UTF-8
-ENV LC_TIME=es_ES
+ENV LANG es_CL.UTF-8
+ENV LANGUAGE es_CL:es
+ENV LC_ALL es_CL.UTF-8
 
 # Configure SSH client (this will include the config form the server, but is not used for SSH access).
 COPY config/ssh/ /home/${WWW_USER}/.ssh/
@@ -170,6 +172,9 @@ COPY config/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 COPY scripts/start_sites.sh /scripts/start_sites.sh
 RUN chmod +x /scripts/start_sites.sh
+
+COPY scripts/start_services.sh /scripts/start_services.sh
+RUN chmod +x /scripts/start_services.sh
 
 RUN mkdir -p /run/gunicorn && chmod 777 /run/gunicorn
 

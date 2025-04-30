@@ -81,7 +81,6 @@ The `-f` parameter allows you to follow logs in real-time.
    ```
    Note: If no site is specified, the script will start all available sites under /var/www/sites.
 
-
 4. Access the site at:
    - Production mode: https://www.example.com (requires DNS configuration).
    - Development mode: https://www.example.com.local:8443 (requires local hosts entry).
@@ -122,6 +121,7 @@ Development
 Helper Scripts
 ├── scripts/
 │   └── start_sites.sh          # Auto-detect and launch Gunicorn for each site under /sites
+│   └── start_services.sh          # Auto-detect and launch Gunicorn for each site under /sites
 Documentation
 ├── docs/
 │   ├── docker.md               # Notes and recommendations for Docker usage
@@ -293,9 +293,27 @@ docker exec -it derafu-sites-server-python-caddy cat /var/log/caddy/access.log
 
 For advanced configurations, modify the Caddyfile at `config/caddy/Caddyfile`.
 
-### Using with Fabric
+### Scripts
 
-**TODO**: Soon.
+#### restart_services
+
+##### 1. **Reiniciar todos los sitios tras un deploy**
+```bash
+./restart_services.sh
+```
+
+##### 2. **Reiniciar un sitio específico**
+```bash
+./restart_services.sh proyecto1
+```
+
+###### 3. **Mantener Gunicorn vivo en Docker o supervisado**
+```bash
+./restart_services.sh supervisor
+```
+- Esto permite que el script actúe como watchdog: detecta fallas en Gunicorn y lo reinicia.
+
+---
 
 ## Contributing
 
