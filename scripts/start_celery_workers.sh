@@ -58,7 +58,7 @@ for path in "$BASE_DIR"/*/current; do
     fi
 
     log "Stopping existing Celery workers for module '$module'..."
-    pkill -f "celery -A $module" || true
+    sudo pkill -f "celery -A $module" || true
     sleep 1
 
     log "Activating environment and launching workers for $folder_name"
@@ -82,7 +82,7 @@ for path in "$BASE_DIR"/*/current; do
         cmd="$cmd --concurrency=$concurrency -n \"$full_name\" -l INFO"
 
         log "Starting worker: $full_name → queue='${queue:-celery}', concurrency=$concurrency"
-        eval "nohup $cmd >> \"$log_file\" 2>&1 &"
+        eval "sudo nohup $cmd >> \"$log_file\" 2>&1 &"
     done
 
     deactivate
