@@ -21,9 +21,9 @@ mkdir -p "$LOG_DIR"
 TARGET_PROJECT=$1  # Optional argument: specific project folder
 
 # Logging helpers
-log()   { echo "$(date +"%F %T") [INFO] $*"; }
-warn()  { echo "$(date +"%F %T") [WARNING] $*" >&2; }
-err()   { echo "$(date +"%F %T") [ERROR] $*" >&2; }
+log()   { echo "$(date +"%F %T") [INFO] - $*"; }
+warn()  { echo "$(date +"%F %T") [WARNING] - $*" >&2; }
+err()   { echo "$(date +"%F %T") [ERROR] - $*" >&2; }
 
 # Loop through all matching project paths under /var/www/sites/*/current
 for path in "$BASE_DIR"/*/current; do
@@ -76,13 +76,18 @@ for path in "$BASE_DIR"/*/current; do
         full_name="${worker_name}.$(hostname)"
         log_file="${LOG_DIR}/${worker_name}.log"
 
-        # Build command dynamically
-        cmd="celery -A \"$module\" worker"
+        base_path="/var/www/sites/$folder_name"
+
+        # Ruta completa al ejecutable celery
+        celery_bin="$base_path/current/venv/bin/celery"
+
+        # Build command dynamically usando la ruta completa
+        cmd="$celery_bin -A \"$module\" worker"
         [ -n "$queue" ] && cmd="$cmd -Q \"$queue\""
         cmd="$cmd --concurrency=$concurrency -n \"$full_name\" -l INFO"
 
         log "Starting worker: $full_name → queue='${queue:-celery}', concurrency=$concurrency"
-        eval "sudo nohup $cmd >> \"$log_file\" 2>&1 &"
+        sudo bash -c "nohup $cmd > \"$log_file\" 2>&1 &"
     done
 
     deactivate
