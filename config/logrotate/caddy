@@ -1,11 +1,20 @@
 /var/log/caddy/*.log {
-    weekly                    # Rota los logs cada semana
-    missingok                 # No mostrar error si el archivo no existe
-    rotate 8                  # Mantener los últimos 8 logs
-    compress                  # Comprimir los logs antiguos
-    delaycompress             # Comprimirlos un ciclo después de la rotación
-    notifempty                # No rotar si está vacío
-    sharedscripts             # Solo ejecutar scripts post-rotación una vez
+    # Rota los logs cada semana
+    weekly
+    # No mostrar error si el archivo no existe
+    missingok
+    # Mantener los últimos 8 logs
+    rotate 8
+    # Comprimir los logs antiguos
+    compress
+    # Comprimirlos un ciclo después de la rotación
+    delaycompress
+    # No rotar si está vacío
+    notifempty
+    # Solo ejecutar scripts post-rotación una vez
+    sharedscripts
+    # Agregar directiva su para evitar problemas de permisos
+    su admin admin
     postrotate
         systemctl reload caddy > /dev/null 2>&1 || true
     endscript

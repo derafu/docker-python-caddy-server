@@ -1,5 +1,6 @@
 fabric/
 sites/
+docker-compose.override.yml
 config/ssh/authorized_keys
 .env
 .DS_Store

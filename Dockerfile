@@ -161,18 +161,25 @@ COPY config/caddy/Caddyfile /etc/caddy/Caddyfile
 COPY config/ssh/sshd_config /etc/ssh/sshd_config
 
 # Create log directories for Gunicorn and Caddy and Celery.
+# Crear directorios con permisos más restrictivos
 RUN mkdir -p /var/log/gunicorn /var/log/caddy /var/log/celery \
-    && chmod 777 /var/log/gunicorn /var/log/caddy /var/log/celery
+    && chown ${WWW_USER}:${WWW_GROUP} /var/log/gunicorn \
+    && chown ${WWW_USER}:${WWW_GROUP} /var/log/caddy \
+    && chown ${WWW_USER}:${WWW_GROUP} /var/log/celery \
+    && chmod 755 /var/log/gunicorn /var/log/caddy /var/log/celery
 
 # Copy logrotate configuration.
 COPY config/logrotate/gunicorn /etc/logrotate.d/gunicorn
 COPY config/logrotate/caddy /etc/logrotate.d/caddy
+COPY config/logrotate/celery /etc/logrotate.d/celery
+
+# Copy Cron configuration.
+COPY config/cron/logrotate /etc/cron.d/logrotate
 
 # Copy Supervisor configuration.
 COPY config/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-COPY scripts/start_sites.sh /scripts/start_sites.sh
-RUN chmod +x /scripts/start_sites.sh
+# Copy scripts.
 
 COPY scripts/start_services.sh /scripts/start_services.sh
 RUN chmod +x /scripts/start_services.sh

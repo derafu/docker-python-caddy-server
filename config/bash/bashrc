@@ -45,11 +45,6 @@ site-build() {
     python manage.py collectstatic
 }
 
-# TODO: ver que hace
-site-clean() {
-    rm -rf "$SITES_DIR/$1/public/static" "$SITES_DIR/$1/var"
-}
-
 site-status() {
     git status
 }
@@ -70,90 +65,69 @@ site-send() {
     git push
 }
 
-# TODO: cambiar por fabric
-# site-deploy() {
-#     if [ -z "$1" ]; then
-#         echo "Usage: site-deploy <domain>"
-#         return 1
-#     fi
-#     "$DEPLOYER_DIR/vendor/bin/dep" -f "$DEPLOYER_DIR/deploy.php" derafu:deploy:single --site="$1"
-# }
-# complete -F _sites_autocomplete_from_php site-deploy
+site-list() {
+    if [ ! -d "$SITES_DIR" ]; then
+        echo "Error: SITES_DIR ($SITES_DIR) does not exist."
+        return 1
+    fi
 
-# TODO: cambiar por fabric
-# site-deploy-locked() {
-#     if [ -z "$1" ]; then
-#         echo "Usage: site-deploy-locked <domain>"
-#         return 1
-#     fi
-#     "$DEPLOYER_DIR/vendor/bin/dep" -f "$DEPLOYER_DIR/deploy.php" derafu:deploy:single --site="$1" --unlock
-# }
-# complete -F _sites_autocomplete_from_php site-deploy-locked
+    echo -e "\nChecking sites in $SITES_DIR...\n"
 
-# TODO: cambiar por fabric
-# site-list() {
-#     if [ ! -d "$SITES_DIR" ]; then
-#         echo "Error: SITES_DIR ($SITES_DIR) does not exist."
-#         return 1
-#     fi
+    # Get list of folders (sites).
+    sites=($(ls -d "$SITES_DIR"/*/ 2>/dev/null | xargs -n 1 basename | sort))
 
-#     echo -e "\nChecking sites in $SITES_DIR...\n"
+    # If no sites, exit.
+    if [ ${#sites[@]} -eq 0 ]; then
+        echo "No sites found in $SITES_DIR."
+        return 0
+    fi
 
-#     # Get list of folders (sites).
-#     sites=($(ls -d "$SITES_DIR"/*/ 2>/dev/null | xargs -n 1 basename | sort))
+    # Get sites configuration from PHP.
+    site_config=$(php -r "
+        \$sites = include '$DEPLOYER_DIR/sites.php';
+        echo json_encode(\$sites, JSON_PRETTY_PRINT);
+    ")
 
-#     # If no sites, exit.
-#     if [ ${#sites[@]} -eq 0 ]; then
-#         echo "No sites found in $SITES_DIR."
-#         return 0
-#     fi
+    # Header of the table.
+    printf "%-30s %-50s %-5s %-5s %-4s\n" "DOMAIN" "REPOSITORY" "MATCH" "DIRTY" "PULL"
+    printf "%-30s %-50s %-5s %-5s %-4s\n" "------------------------------" "--------------------------------------------------" "-----" "-----" "----"
 
-#     # Get sites configuration from PHP.
-#     site_config=$(php -r "
-#         \$sites = include '$DEPLOYER_DIR/sites.php';
-#         echo json_encode(\$sites, JSON_PRETTY_PRINT);
-#     ")
+    # Iterate over each site.
+    for site in "${sites[@]}"; do
+        site_path="$SITES_DIR/$site"
+        repo_local=""
+        repo_config=""
+        match="NO"
+        dirty="NO"
+        pull="NO"
 
-#     # Header of the table.
-#     printf "%-30s %-50s %-5s %-5s %-4s\n" "DOMAIN" "REPOSITORY" "MATCH" "DIRTY" "PULL"
-#     printf "%-30s %-50s %-5s %-5s %-4s\n" "------------------------------" "--------------------------------------------------" "-----" "-----" "----"
+        # Extract the repository from the PHP file.
+        repo_config=$(
+            echo "$site_config" \
+            | jq -r --arg site "$site" '.[$site] | if type=="string" then . else .repository end' \
+            | grep -v null || echo "N/A" \
+        )
 
-#     # Iterate over each site.
-#     for site in "${sites[@]}"; do
-#         site_path="$SITES_DIR/$site"
-#         repo_local=""
-#         repo_config=""
-#         match="NO"
-#         dirty="NO"
-#         pull="NO"
+        # If it is a Git repository, get the remote URL.
+        if [ -d "$site_path/.git" ]; then
+            repo_local=$(git -C "$site_path" remote get-url origin 2>/dev/null || echo "Unknown")
 
-#         # Extract the repository from the PHP file.
-#         repo_config=$(
-#             echo "$site_config" \
-#             | jq -r --arg site "$site" '.[$site] | if type=="string" then . else .repository end' \
-#             | grep -v null || echo "N/A" \
-#         )
+            # Compare repositories.
+            [ "$repo_local" == "$repo_config" ] && match="YES"
 
-#         # If it is a Git repository, get the remote URL.
-#         if [ -d "$site_path/.git" ]; then
-#             repo_local=$(git -C "$site_path" remote get-url origin 2>/dev/null || echo "Unknown")
+            # Check if the repository is dirty.
+            [ -n "$(git -C "$site_path" status --porcelain)" ] && dirty="YES"
 
-#             # Compare repositories.
-#             [ "$repo_local" == "$repo_config" ] && match="YES"
+            # Check if there are pending remote changes.
+            git -C "$site_path" fetch -q
+            count=$(git -C "$site_path" rev-list HEAD...origin --count 2>/dev/null || echo "0")
+            [ "$count" -gt 0 ] && pull="YES"
+        fi
 
-#             # Check if the repository is dirty.
-#             [ -n "$(git -C "$site_path" status --porcelain)" ] && dirty="YES"
-
-#             # Check if there are pending remote changes.
-#             git -C "$site_path" fetch -q
-#             count=$(git -C "$site_path" rev-list HEAD...origin --count 2>/dev/null || echo "0")
-#             [ "$count" -gt 0 ] && pull="YES"
-#         fi
-
-#         # Show results.
-#         printf "%-30s %-50s %-5s %-5s %-4s\n" "$site" "${repo_config:-N/A}" "$match" "$dirty" "$pull"
-#     done
-# }
+        # Show results.
+        printf "%-30s %-50s %-5s %-5s %-4s\n" "$site" "${repo_config:-N/A}" "$match" "$dirty" "$pull"
+    done
+}
 
 site-clone() {
     if [ -z "$1" ] || [ -z "$2" ]; then
@@ -166,20 +140,6 @@ site-clone() {
     site-dependencies && \
     site-build
 }
-
-# TODO: armar para django
-# site-create() {
-#     if [ -z "$1" ]; then
-#         echo "Usage: site-create <domain>"
-#         return 1
-#     fi
-#     cd "$SITES_DIR" && \
-#     composer create-project derafu/website "$1" --stability=dev && \
-#     site "$1" && \
-#     site-dependencies && \
-#     site-build && \
-#     git init
-# }
 
 site-add() {
     if [ -z "$1" ] || [ -z "$2" ]; then
@@ -197,21 +157,15 @@ site-help() {
     echo -e "Usage:"
     echo -e "  site <domain>                   # Navigate to a site directory"
     echo -e "  site-list                       # List all configured sites"
-    echo -e "  site-create <domain>            # Create a new site"
     echo -e "  site-clone <domain> <git-url>   # Clone an existing site"
     echo -e "  site-add <domain> <git-url>     # Add a site to the deployer configuration"
 
     echo -e "\nSite Management Commands (inside the site directory):"
     echo -e "  site-dependencies               # Install dependencies (Composer & npm)"
     echo -e "  site-build                      # Build the site's assets"
-    echo -e "  site-clean                      # Remove cached files"
     echo -e "  site-status                     # Show the Git status"
     echo -e "  site-update                     # Pull latest changes and rebuild"
     echo -e "  site-send \"<commit message>\"    # Add, commit and push all changes"
-
-    echo -e "\nDeployment Commands:"
-    echo -e "  site-deploy <domain>            # Deploy the site using Deployer"
-    echo -e "  site-deploy-locked <domain>     # Deploy even if locked (force unlock)"
 
     echo -e "\nAliases & Utility Commands:"
     echo -e "  ll                              # Shortcut for 'ls -lah'"

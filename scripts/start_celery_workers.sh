@@ -16,7 +16,6 @@ set -e  # Exit script if any command fails
 
 BASE_DIR="/var/www/sites"
 LOG_DIR="/var/log/celery"
-mkdir -p "$LOG_DIR"
 
 TARGET_PROJECT=$1  # Optional argument: specific project folder
 

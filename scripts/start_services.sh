@@ -93,7 +93,8 @@ restart_gunicorn() {
     --access-logfile "$access_log" \
     --error-logfile "$error_log" \
     --log-level=debug \
-    >> "/tmp/gunicorn_direct_$site.log" 2>&1 &
+    --capture-output \
+    >> "/var/log/gunicorn/gunicorn_direct_$site.log" 2>&1 &
 
     # Save the PID for verification
     local GUNICORN_PID=$!
@@ -106,7 +107,7 @@ restart_gunicorn() {
     if kill -0 $GUNICORN_PID 2>/dev/null; then
         log_info "Verified Gunicorn is running for $site with PID $GUNICORN_PID"
     else
-        log_warning "Could not verify if Gunicorn started for $site. Check logs at /tmp/gunicorn_direct_$site.log"
+        log_warning "Could not verify if Gunicorn started for $site. Check logs at /var/log/gunicorn/gunicorn_direct_$site.log"
     fi
 }
 
