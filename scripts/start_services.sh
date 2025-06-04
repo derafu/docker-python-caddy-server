@@ -93,8 +93,7 @@ restart_gunicorn() {
     --access-logfile "$access_log" \
     --error-logfile "$error_log" \
     --log-level=debug \
-    --capture-output \
-    >> "/var/log/gunicorn/gunicorn_direct_$site.log" 2>&1 &
+    --capture-output &
 
     # Save the PID for verification
     local GUNICORN_PID=$!
