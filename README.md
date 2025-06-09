@@ -121,7 +121,7 @@ Development
 Helper Scripts
 ├── scripts/
 │   └── start_sites.sh          # Auto-detect and launch Gunicorn for each site under /sites
-│   └── start_services.sh          # Auto-detect and launch Gunicorn for each site under /sites
+│   └── start_gunicorn_supervisord.sh          # Auto-detect and launch Gunicorn for each site under /sites
 Documentation
 ├── docs/
 │   ├── docker.md               # Notes and recommendations for Docker usage

@@ -181,11 +181,11 @@ COPY config/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Copy scripts.
 
-COPY scripts/start_services.sh /scripts/start_services.sh
-RUN chmod +x /scripts/start_services.sh
+COPY scripts/start_gunicorn_supervisord.sh /scripts/start_gunicorn_supervisord.sh
+RUN chmod +x /scripts/start_gunicorn_supervisord.sh
 
-COPY scripts/start_celery_workers.sh /scripts/start_celery_workers.sh
-RUN chmod +x /scripts/start_celery_workers.sh
+COPY scripts/start_celery_supervisord.sh /scripts/start_celery_supervisord.sh
+RUN chmod +x /scripts/start_celery_supervisord.sh
 
 RUN mkdir -p /run/gunicorn && chmod 777 /run/gunicorn
 
