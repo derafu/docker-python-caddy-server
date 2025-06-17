@@ -135,7 +135,7 @@ redirect_stderr=true
 stdout_logfile=/var/log/supervisor/celery-$site_name-$worker_name.log
 stdout_logfile_maxbytes=50MB
 stdout_logfile_backups=10
-environment=PATH="$current_path/$venv_path/bin:/usr/local/bin:/usr/bin:/bin",PYTHONPATH="$current_path"
+environment=HOME="/home/$APP_USER",PATH="$current_path/$venv_path/bin:/usr/local/bin:/usr/bin:/bin",PYTHONPATH="$current_path"
 priority=920
 startsecs=10
 startretries=3

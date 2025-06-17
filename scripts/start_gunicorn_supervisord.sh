@@ -149,7 +149,7 @@ stdout_logfile_backups=10
 stderr_logfile=/var/log/supervisor/gunicorn-$site_name-error.log
 stderr_logfile_maxbytes=50MB
 stderr_logfile_backups=10
-environment=PATH="$current_path/$venv_path/bin:/usr/local/bin:/usr/bin:/bin",PYTHONPATH="$current_path"
+environment=HOME="/home/$APP_USER",PATH="$current_path/$venv_path/bin:/usr/local/bin:/usr/bin:/bin",PYTHONPATH="$current_path"
 priority=900
 startsecs=10
 startretries=3
