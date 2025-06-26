@@ -151,7 +151,7 @@ site-add() {
 
 # Welcome message and useful commands.
 site-help() {
-    echo -e "\n🚀 PHP & Caddy Docker Environment - Help Guide 🚀\n"
+    echo -e "\n PHP & Caddy Docker Environment - Help Guide\n"
     echo -e "This container is configured for developing and managing PHP-based sites with Caddy.\n"
 
     echo -e "Usage:"
@@ -177,7 +177,23 @@ site-help() {
     echo -e "  DEPLOYER_DIR: $DEPLOYER_DIR"
     echo -e "  DEPLOYER_HOST: $DEPLOYER_HOST"
 
-    echo -e "\nFor additional help, contact the administrator or check the project documentation."
+    echo -e "\nDeployment Process:"
+    echo -e "  1. Configure site in sites.yml (python-fabric-deployer):"
+    echo -e "     app.ejemplo.cl:"
+    echo -e "       host: admin@prod.ejemplo.cl"
+    echo -e "       repository: git@github.com:user/repo.git"
+    echo -e "       deploy_path: /var/www/sites/app.ejemplo.cl"
+    echo -e "       backup_path: /var/www/sites/backup/app.ejemplo.cl"
+    echo -e "       port: 2222"
+    echo -e "       branch: master"
+    echo -e "       runner: ssh"
+    echo -e "       max_backups: 5"
+    echo -e "       max_releases: 5"
+    echo -e "\n  2. Activate Python environment and deploy:"
+    echo -e "     fab2 deploy --site=app.ejemplo.cl"
+
+    echo -e "\nRestart a deployed site:"
+    echo -e "     fab2 restart-site --site=app.ejemplo.cl"
 }
 
 # Show the sites help when the user enters the container.
